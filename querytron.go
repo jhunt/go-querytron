@@ -208,7 +208,7 @@ func Generate(thing interface{}) url.Values {
 
 	t := reflect.TypeOf(thing)
 	v := reflect.ValueOf(thing)
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Ptr && !v.IsNil() {
 		v = v.Elem()
 		t = v.Type()
 	}

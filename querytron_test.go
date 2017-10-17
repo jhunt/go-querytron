@@ -254,6 +254,10 @@ func TestQuerytronGenerate(t *testing.T) {
 	u = qs.Generate(nil)
 	is(u.Encode(), "", "nil generator")
 
+	var nilStrings *Strings = nil
+	u = qs.Generate(nilStrings)
+	is(u.Encode(), "", "nil generator")
+
 	u = qs.Generate(Strings{Version: "1.2.3"})
 	is(u.Encode(), "v=1.2.3", "alternate name string generator")
 
