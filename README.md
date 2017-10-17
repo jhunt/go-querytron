@@ -1,6 +1,8 @@
 Querytron
 =========
 
+![Travis CI](https://travis-ci.org/jhunt/go-querytron.svg?branch=master)
+
 Following hot on the successes of [Envirotron][env], **Querytron**
 is here to save the day!
 
