@@ -35,6 +35,33 @@ func main() {
 }
 ```
 
+Querytron also works in the other direction, generating
+querystrings for you, from structure definitions.  Given a
+structure like:
+
+```
+type Example struct {
+  Query string `qs:"q"`
+  Limit *int   `qs:"limit"`
+  Fuzzy *bool  `qs:"fuzzy:yes"`
+}
+```
+
+A call to `qs.Generate(&Example{...})` will generate a
+`url.Values` object and return it, such that:
+
+- **q=...** is set if `Query` is anything besides the empty string
+= **limit=...** is set if `Limit` is a non-nil int pointer
+- **fuzzy=y** is set if `Fuzzy` is non-nil and points to true
+
+This should make query-string based API client interfaces easier
+to write.
+
+Oh, and if you (like me) are a bit miffed that Go doesn't let you
+take the address of literals, there's a whole suite of
+address-taking functions, like `qs.Int(...)`, `qs.Uint64()`, etc.,
+as well as two pointer-booleans, `qs.True` and `qs.False`.
+
 Happy Hacking!
 
 [env]: https://github.com/jhunt/go-envirotron

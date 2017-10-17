@@ -1,9 +1,9 @@
 package querytron_test
 
 import (
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 
 	qs "github.com/jhunt/go-querytron"
 )
@@ -200,9 +200,9 @@ func TestQuerytronBools(t *testing.T) {
 		}
 	}
 
-	trues  := strings.Split("Y y Yes YES yES true TrUe 1", " ")
+	trues := strings.Split("Y y Yes YES yES true TrUe 1", " ")
 	falses := strings.Split("N n No NO nO false fALse 0", " ")
-	check  := Values{}
+	check := Values{}
 
 	for _, yes := range trues {
 		check.Bool = false
@@ -219,4 +219,78 @@ func TestQuerytronBools(t *testing.T) {
 		qs.Override(&check, q)
 		is(check.Bool, false, no, "structure bool is overridden to be false")
 	}
+}
+
+type Strings struct {
+	Name    string `qs:"name"`
+	Version string `qs:"v"`
+}
+
+type Numbers struct {
+	Number int `qs:"num"`
+}
+
+type Optional struct {
+	Number *uint `qs:"opt"`
+}
+
+type Bools struct {
+	Bool  *bool `qs:"bool"`
+	YesNo *bool `qs:"bool:y:n"`
+	TF    *bool `qs:"bool:t:f"`
+	If    *bool `qs:"bool:yes"`
+}
+
+func TestQuerytronGenerate(t *testing.T) {
+	is := func(got, expect string, message string) {
+		if got != expect {
+			t.Errorf("%s failed - got [%s], expected [%s]\n", message, got, expect)
+		}
+	}
+
+	u := qs.Generate(Strings{Name: "generator"})
+	is(u.Encode(), "name=generator", "string generator")
+
+	u = qs.Generate(nil)
+	is(u.Encode(), "", "nil generator")
+
+	u = qs.Generate(Strings{Version: "1.2.3"})
+	is(u.Encode(), "v=1.2.3", "alternate name string generator")
+
+	u = qs.Generate(Numbers{Number: 42})
+	is(u.Encode(), "num=42", "number generator")
+
+	u = qs.Generate(Optional{})
+	is(u.Encode(), "", "number pointer generator")
+
+	u = qs.Generate(Optional{Number: qs.Uint(42)})
+	is(u.Encode(), "opt=42", "number pointer generator")
+
+	u = qs.Generate(Bools{Bool: qs.True})
+	is(u.Encode(), "bool=", "default bool generator")
+	u = qs.Generate(Bools{Bool: qs.False})
+	is(u.Encode(), "", "default bool generator")
+	u = qs.Generate(Bools{Bool: nil})
+	is(u.Encode(), "", "default bool generator")
+
+	u = qs.Generate(Bools{YesNo: qs.True})
+	is(u.Encode(), "bool=y", "y:n bool generator")
+	u = qs.Generate(Bools{YesNo: qs.False})
+	is(u.Encode(), "bool=n", "y:n bool generator")
+	u = qs.Generate(Bools{YesNo: nil})
+	is(u.Encode(), "", "y:n bool generator")
+
+	u = qs.Generate(Bools{TF: qs.True})
+	is(u.Encode(), "bool=t", "t:f bool generator")
+	u = qs.Generate(Bools{TF: qs.False})
+	is(u.Encode(), "bool=f", "t:f bool generator")
+	u = qs.Generate(Bools{TF: nil})
+	is(u.Encode(), "", "t:f bool generator")
+
+	u = qs.Generate(Bools{If: qs.True})
+	is(u.Encode(), "bool=yes", "2-arg bool generator")
+	u = qs.Generate(Bools{If: qs.False})
+	is(u.Encode(), "", "2-arg bool generator")
+	u = qs.Generate(Bools{If: nil})
+	is(u.Encode(), "", "2-arg bool generator")
 }

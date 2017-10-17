@@ -1,11 +1,36 @@
 package querytron
 
 import (
-	"strings"
-	"strconv"
-	"reflect"
+	"fmt"
 	"net/url"
+	"reflect"
+	"strconv"
+	"strings"
 )
+
+var (
+	True  *bool
+	False *bool
+)
+
+func init() {
+	t := true
+	True = &t
+
+	f := false
+	False = &f
+}
+
+func Int(v int) *int          { return &v }
+func Int8(v int8) *int8       { return &v }
+func Int16(v int16) *int16    { return &v }
+func Int32(v int32) *int32    { return &v }
+func Int64(v int64) *int64    { return &v }
+func Uint(v uint) *uint       { return &v }
+func Uint8(v uint8) *uint8    { return &v }
+func Uint16(v uint16) *uint16 { return &v }
+func Uint32(v uint32) *uint32 { return &v }
+func Uint64(v uint64) *uint64 { return &v }
 
 func override(q url.Values, t reflect.Type, v *reflect.Value) {
 	if t.Kind() != reflect.Struct {
@@ -89,13 +114,132 @@ func Override(thing interface{}, q url.Values) {
 	override(q, t, &v)
 }
 
+func generate(q *url.Values, t reflect.Type, v *reflect.Value) {
+	if t.Kind() != reflect.Struct {
+		return
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if field.PkgPath != "" {
+			continue
+		}
+		if _, set := field.Tag.Lookup("qs"); !set {
+			continue
+		}
+		tag := field.Tag.Get("qs")
+		switch field.Type.Kind() {
+		case reflect.String:
+			if s := v.Field(i).String(); s != "" {
+				q.Add(tag, s)
+			}
+
+		case reflect.Int:
+			fallthrough
+		case reflect.Int8:
+			fallthrough
+		case reflect.Int16:
+			fallthrough
+		case reflect.Int32:
+			fallthrough
+		case reflect.Int64:
+			q.Add(tag, fmt.Sprintf("%v", v.Field(i).Int()))
+
+		case reflect.Uint:
+			fallthrough
+		case reflect.Uint8:
+			fallthrough
+		case reflect.Uint16:
+			fallthrough
+		case reflect.Uint32:
+			fallthrough
+		case reflect.Uint64:
+			q.Add(tag, fmt.Sprintf("%v", v.Field(i).Uint()))
+
+		/* FIXME: alway-on bool support */
+		case reflect.Bool:
+			setbool(q, tag, v.Field(i).Bool())
+			break
+
+		case reflect.Ptr:
+			if v.Field(i).Pointer() != 0 {
+				switch field.Type.Elem().Kind() {
+				case reflect.String:
+					if s := v.Field(i).String(); s != "" {
+						q.Add(tag, s)
+					}
+
+				case reflect.Int:
+					fallthrough
+				case reflect.Int8:
+					fallthrough
+				case reflect.Int16:
+					fallthrough
+				case reflect.Int32:
+					fallthrough
+				case reflect.Int64:
+					q.Add(tag, fmt.Sprintf("%v", v.Field(i).Elem().Int()))
+
+				case reflect.Uint:
+					fallthrough
+				case reflect.Uint8:
+					fallthrough
+				case reflect.Uint16:
+					fallthrough
+				case reflect.Uint32:
+					fallthrough
+				case reflect.Uint64:
+					q.Add(tag, fmt.Sprintf("%v", v.Field(i).Elem().Uint()))
+
+				case reflect.Bool:
+					setbool(q, tag, v.Field(i).Elem().Bool())
+				}
+			}
+			break
+		}
+	}
+}
+
+func Generate(thing interface{}) url.Values {
+	q := make(url.Values)
+	if thing == nil {
+		return q
+	}
+
+	t := reflect.TypeOf(thing)
+	v := reflect.ValueOf(thing)
+	for t.Kind() == reflect.Ptr {
+		v = v.Elem()
+		t = v.Type()
+	}
+
+	generate(&q, t, &v)
+	return q
+}
+
+func setbool(u *url.Values, tag string, tru bool) {
+	tags := strings.Split(tag, ":")
+	if len(tags) == 3 && !tru {
+		u.Add(tags[0], tags[2])
+		return
+	}
+	if len(tags) > 1 && tru {
+		u.Add(tags[0], tags[1])
+		return
+	}
+	if tru {
+		u.Add(tags[0], "")
+	}
+}
+
 func stringify(s string) string {
 	return s
 }
 
 func boolify(s string) bool {
 	switch strings.ToLower(s) {
-	case "y", "yes", "1", "true": return true
+	case "y", "yes", "1", "true":
+		return true
 	}
 	return false
 }
